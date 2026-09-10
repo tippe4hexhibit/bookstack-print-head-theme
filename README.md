@@ -40,20 +40,21 @@ untouched.
 BookStack looks for an active theme in a `themes/<name>/` folder at the root of
 the install, activated by setting the `APP_THEME` environment variable.
 
-1. Copy the `themes/4h-fair/` folder from this repo into your BookStack
-   install's `themes/` directory. (You can rename `4h-fair` to whatever theme
-   name you like — just make sure the folder name matches `APP_THEME` below.)
+1. Copy the `themes/print-export-scripts/` folder from this repo into your
+   BookStack install's `themes/` directory. (You can rename
+   `print-export-scripts` to whatever theme name you like — just make sure the
+   folder name matches `APP_THEME` below.)
 
    Result should look like:
 
    ```
-   <bookstack-root>/themes/4h-fair/exports/parts/custom-head.blade.php
+   <bookstack-root>/themes/print-export-scripts/exports/parts/custom-head.blade.php
    ```
 
 2. Set the environment variable in your BookStack `.env` file:
 
    ```
-   APP_THEME=4h-fair
+   APP_THEME=print-export-scripts
    ```
 
 3. Make sure `ALLOW_CONTENT_SCRIPTS=true` (or an `APP_CONTENT_FILTERING` value
@@ -87,14 +88,14 @@ persistent `/config` volume so they survive container updates:
 So on these hosts:
 
 1. SFTP/SSH into the container.
-2. Copy `themes/4h-fair/` from this repo into `/config/www/themes/`, so you
-   end up with:
+2. Copy `themes/print-export-scripts/` from this repo into
+   `/config/www/themes/`, so you end up with:
 
    ```
-   /config/www/themes/4h-fair/exports/parts/custom-head.blade.php
+   /config/www/themes/print-export-scripts/exports/parts/custom-head.blade.php
    ```
 
-3. Add `APP_THEME=4h-fair` to `/config/www/.env`.
+3. Add `APP_THEME=print-export-scripts` to `/config/www/.env`.
    - **Check your host's dashboard first.** Some managed hosts (Pikapods
      included, depending on plan/setup) expose environment variables through
      their own UI and may regenerate `.env` from that on redeploy, which would
