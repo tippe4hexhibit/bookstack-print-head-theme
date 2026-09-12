@@ -200,7 +200,10 @@ body {
   margin-left: 0.55in;
   margin-right: 0.65in;
 
-  @top-right {
+  /* Running hint and page number both live in the footer now, on
+     opposite sides -- hint on the inner (left) side, number on the
+     outer (right) side, the same side it's always been on. */
+  @bottom-left {
     content: string(page-title);
     font-family: var(--font-heading);
     font-size: 8pt;
@@ -219,18 +222,18 @@ body {
   margin-left: 0.65in;
   margin-right: 0.55in;
 
-  @top-left {
-    content: string(chapter-title);
-    font-family: var(--font-heading);
-    font-size: 8pt;
-    letter-spacing: 0.04em;
-    color: var(--color-muted);
-  }
   @bottom-left {
     content: counter(page);
     font-family: var(--font-heading);
     font-size: 9pt;
     color: var(--color-text);
+  }
+  @bottom-right {
+    content: string(chapter-title);
+    font-family: var(--font-heading);
+    font-size: 8pt;
+    letter-spacing: 0.04em;
+    color: var(--color-muted);
   }
 }
 
@@ -270,6 +273,18 @@ body {
    <div class="page-break">. This is the one rule that turns those markers
    into real Paged.js page breaks; everything else about pagination follows
    from it automatically.
+
+   At least one boundary in this book (confirmed on a real export: the
+   page after "4-H Fair Exhibit Information", immediately before "Weather
+   Policies") ends up with a genuinely empty page inserted between the two,
+   for reasons that turned out not to be about break-before/break-after at
+   all -- neither adding break-before to the following heading alongside
+   this marker's break-after, nor removing the marker's break-after so only
+   the heading's break-before governed, stopped it, both tried and tested
+   live against a real export. Whatever is deciding to insert that extra
+   page isn't something these break properties control. The actual fix is
+   in fix-toc-and-links.js's after() hook instead: it finds any page like
+   this once Paged.js has finished and removes it directly.
    ======================================================================== */
 
 .page-break {

@@ -149,6 +149,62 @@ window.PagedConfig = {
       });
     });
 
+    /**
+     * Removes any chapter/page-boundary page Paged.js rendered with
+     * nothing real on it. Confirmed live on a real export that this
+     * happens at at least one boundary in this book -- a page ending
+     * almost exactly at the bottom margin, immediately followed by a
+     * heading that lands two pages forward instead of one, for reasons
+     * neither break-after on the .page-break marker nor break-before on
+     * the heading prevented (both tried against a real export; see
+     * handbook-print.css's page-break comment). Rather than keep
+     * guessing at why the polyfill decided to insert that page, this
+     * finds whatever it actually produced and deletes it: any page whose
+     * .pagedjs_page_content (the actual body area, not the margin boxes
+     * the running header/footer live in) has no text and no image/table/
+     * figure. The cover and blank backside are real, intentionally
+     * near-empty pages -- see handbook-print.css's front-matter comment
+     * -- so they're excluded by the same .front-matter-page check used
+     * for the margin-hiding above.
+     *
+     * data-page-number is renumbered afterward purely for this script's
+     * own bookkeeping: the TOC-page-number stamping below reads it
+     * directly, and would otherwise go stale for every page after a
+     * removal. This doesn't affect what actually prints -- the running
+     * footer number comes from a live CSS counter that the browser
+     * recomputes from whatever pages remain in the DOM at print time,
+     * the same way removing an <li> renumbers the rest of an <ol>.
+     *
+     * innerText, not textContent, for the emptiness check: .chapter-hint
+     * (the running-header source above every page title, see the
+     * chapter-hint comment further down in handbook-print.css) is
+     * display:none but still has real text in it, and can be the only
+     * thing left on one of these otherwise-empty pages. textContent
+     * reads straight through display:none and would see that text as
+     * real content, missing exactly the page this is meant to catch --
+     * confirmed live, this was silently defeating the whole check.
+     * innerText reflects only what's actually rendered, the same
+     * distinction a human looking at the page would make.
+     */
+    document.querySelectorAll(".pagedjs_page").forEach(function (pg) {
+      if (pg.querySelector(".front-matter-page")) {
+        return;
+      }
+      var contentArea = pg.querySelector(".pagedjs_page_content");
+      if (!contentArea) {
+        return;
+      }
+      var hasText = contentArea.innerText.trim().length > 0;
+      var hasMedia = contentArea.querySelector("img, table, figure");
+      if (!hasText && !hasMedia) {
+        pg.remove();
+      }
+    });
+
+    document.querySelectorAll(".pagedjs_page").forEach(function (pg, index) {
+      pg.setAttribute("data-page-number", index + 1);
+    });
+
     var pageEls = Array.prototype.slice.call(
       document.querySelectorAll(".pagedjs_page")
     );
