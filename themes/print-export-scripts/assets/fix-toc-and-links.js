@@ -82,6 +82,22 @@ window.PagedConfig = {
       a.style.opacity = "0.5";
       a.style.cursor = "default";
     });
+
+    /**
+     * Marks the book-title h1 (the big "Tippecanoe County 4-H Handbook
+     * 2026" page, immediately before the table of contents -- not to be
+     * confused with the "Title Page" BookStack entity, which is the cover
+     * image and a separate, earlier physical page) so after() can find it
+     * again once it's been cloned into its rendered page. It has no id of
+     * its own to select by (see handbook-print.css's title-page comment),
+     * and this has to happen before Paged.js clones it, for the same
+     * reason the TOC lock above uses an inline style rather than
+     * anything added afterward.
+     */
+    var titleH1 = document.querySelector(".page-content > h1:first-of-type");
+    if (titleH1) {
+      titleH1.setAttribute("data-title-page", "");
+    }
   },
 
   after: function (flow) {
@@ -94,6 +110,43 @@ window.PagedConfig = {
       a.style.pointerEvents = "";
       a.style.opacity = "";
       a.style.cursor = "";
+    });
+
+    /**
+     * Hides the running header/footer on the cover, the blank backside
+     * (when present), and the book-title/TOC-lead-in page, so none of
+     * them show a page number -- while leaving the underlying page count
+     * completely alone, so every page after them still prints its true
+     * physical position (see handbook-print.css's front-matter comment
+     * for why nothing here resets or offsets that count). This runs
+     * against the already-rendered page rather than through CSS, because
+     * the two native CSS ways to target one specific physical page both
+     * failed here: @page :blank only matches a page with no generated
+     * content at all, and the blank backside, precisely because it's a
+     * real authored page (see book.blade.php's comment on why), always
+     * has some; and CSS named pages, confirmed live, reproduce the stray
+     * blank page bug already documented elsewhere in handbook-print.css
+     * for this polyfill build. Neither problem exists for a plain DOM
+     * search after layout is done.
+     */
+    document.querySelectorAll(".pagedjs_page").forEach(function (pg) {
+      var isFrontMatter = pg.querySelector(".front-matter-page");
+      var isTitlePage = pg.querySelector("[data-title-page]");
+      if (!isFrontMatter && !isTitlePage) {
+        return;
+      }
+      pg.querySelectorAll(
+        [
+          ".pagedjs_margin-top",
+          ".pagedjs_margin-bottom",
+          ".pagedjs_margin-top-left-corner-holder",
+          ".pagedjs_margin-top-right-corner-holder",
+          ".pagedjs_margin-bottom-left-corner-holder",
+          ".pagedjs_margin-bottom-right-corner-holder",
+        ].join(", ")
+      ).forEach(function (marginBox) {
+        marginBox.style.visibility = "hidden";
+      });
     });
 
     var pageEls = Array.prototype.slice.call(
