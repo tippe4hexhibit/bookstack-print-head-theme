@@ -2,7 +2,10 @@
    Tippecanoe County 4-H Handbook: print stylesheet for Paged.js
    Written against the BookStack export markup:
      .page-content            wrapper BookStack puts around the whole export
-     h1 (no id)                the book title, once, at the very top
+     h1 (no id)                the book title -- still the first h1 in the
+                                export, but no longer necessarily the first
+                                thing physically on the page; see the
+                                front-matter note below
      ul.contents               BookStack's own generated table of contents
      div.page-break            BookStack's manual page-break marker
      h1[id^="chapter-"]        a Chapter entity title
@@ -14,6 +17,28 @@
    print-export-scripts BookStack theme's exports/parts/custom-head.blade.php
    override, after BookStack's own exported <style> block so it wins the
    cascade.
+
+   Front matter: exports/book.blade.php (also overridden by this theme) pulls
+   top-level pages named exactly "Title Page" and "Blank Page" out of normal
+   book order and renders them first, in that order, ahead of the book <h1>
+   above -- the handbook's cover image and its blank backside, both
+   authored pages. See the comment in book.blade.php for why Blank Page has
+   to be a real authored page rather than generated markup: every
+   auto-generated substitute tried this session was handled inconsistently
+   by this Paged.js build. Both stay out of the table of contents (built
+   from the remaining children only) and out of the printed page count:
+   physical page 1 (the cover) gets no running header/footer from the
+   @page :first rule below regardless of what's on it, physical page 2 (the
+   blank backside, genuinely empty) is expected to pick up the same
+   treatment from the existing @page :blank rule below, and
+   .page-content > h1:first-of-type carries a counter-reset so the relocated
+   book title -- unchanged as the first h1 in the export -- still comes out
+   as printed page 1 once numbering starts. In practice @page :blank hasn't
+   reliably suppressed the blank backside's number in testing; a visible "2"
+   there (and "1" on the title page) has been accepted rather than chased
+   further, since fixing it would mean CSS named pages, which this file has
+   already found to cause a stray blank page elsewhere (see the chapter-hint
+   note further down).
 
    The @font-face block below points at plain bare filenames (e.g. just
    72-Regular-full.woff2), not paths. That's deliberate: the theme's
@@ -357,6 +382,75 @@ figure img {
 .page-content > h1:first-of-type {
   text-align: center;
   margin-top: 3in;
+  /* Makes this page "1" for the running @bottom-left/@bottom-right
+     counter(page), regardless of how many front-matter pages (Title Page /
+     Blank Page, see exports/book.blade.php) precede it -- those pages get
+     no visible number anyway (see @page :first / @page :blank below), but
+     without this reset the *count* they consume would still shift every
+     subsequent page number down by one. counter-reset on a normal element
+     is standard CSS Paged Media, not the named "page:" property -- that one
+     is deliberately avoided here, see the chapter-hint note further down
+     about the stray-blank-page bug it caused in this polyfill build. */
+  counter-reset: page 1;
+  /* break-before, in addition to (not instead of) the <div class="page-break">
+     that already precedes this h1 in the export: with only the preceding
+     marker's break-after, Blank Page's own break was being silently
+     dropped in testing -- its content and this h1 ended up sharing one
+     physical page instead of Blank Page getting the separate page it's
+     supposed to. Same fix already used a few lines below for
+     .page-content > ul.contents, which needed break-before instead of
+     break-after for the same kind of reason (a short-content boundary this
+     polyfill doesn't reliably honor from only one side). Belt-and-suspenders
+     with the existing marker div rather than a replacement for it, since
+     removing that marker hasn't been re-tested. */
+  break-before: page;
+}
+
+/* ========================================================================
+   Front matter (Title Page / Blank Page)
+   See exports/book.blade.php: the book's "Title Page" and "Blank Page", if
+   present, get wrapped in .front-matter-page and relocated ahead of the
+   book title above. This rule only visibly affects Title Page, since
+   that's the one with an image in it. Since the
+   image is the only thing on the page, it should fill as much of the page
+   as it can without crossing the margins, in either direction: scaled down
+   if it's larger than the page (an image pasted in at natural resolution
+   can easily be taller than the 9.4in usable height here: 11in - 0.75in
+   top - 0.85in bottom -- an oversized image overflowing onto the following
+   page is exactly what looked like the front-matter pages came out in the
+   wrong order, even though the underlying HTML order was always correct),
+   or scaled up if it's smaller. object-fit: contain on a fixed content-box
+   size does both from one rule, centered, aspect ratio preserved either
+   way. This is ordinary CSS box layout, not a Paged-Media-specific
+   feature, so unlike the break/counter/@page rules elsewhere in this file
+   it isn't expected to be sensitive to this polyfill's quirks.
+
+   The .page-content .front-matter-page img selector below (rather than
+   just .front-matter-page img) isn't decorative -- BookStack's own
+   exported <style> block carries ".page-content img:not([data-mce-object])
+   { max-width:100%; height:auto }" at specificity (0,0,2,1), which beat a
+   plain ".front-matter-page img" (0,0,1,1) and silently overrode the fixed
+   height back to auto, making object-fit have nothing to letterbox against
+   (confirmed by inspecting the computed style on the actual rendered image
+   in a browser: height came back as the aspect-ratio-derived auto value,
+   not 9.3in). Matching that specificity exactly (also (0,0,2,1)) lets
+   source order settle it instead: this file loads after BookStack's own
+   <style> block (see custom-head.blade.php), so this rule wins.
+   ======================================================================== */
+
+.front-matter-page,
+.front-matter-page p,
+.front-matter-page a {
+  margin: 0;
+  padding: 0;
+}
+
+.page-content .front-matter-page img {
+  display: block;
+  margin: 0 auto;
+  width: 100%;
+  height: 9.3in;
+  object-fit: contain;
 }
 
 /* ========================================================================
