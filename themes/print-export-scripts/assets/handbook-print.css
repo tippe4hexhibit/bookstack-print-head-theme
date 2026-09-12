@@ -26,19 +26,21 @@
    to be a real authored page rather than generated markup: every
    auto-generated substitute tried this session was handled inconsistently
    by this Paged.js build. Both stay out of the table of contents (built
-   from the remaining children only) and out of the printed page count:
-   physical page 1 (the cover) gets no running header/footer from the
-   @page :first rule below regardless of what's on it, physical page 2 (the
-   blank backside, genuinely empty) is expected to pick up the same
-   treatment from the existing @page :blank rule below, and
-   .page-content > h1:first-of-type carries a counter-reset so the relocated
-   book title -- unchanged as the first h1 in the export -- still comes out
-   as printed page 1 once numbering starts. In practice @page :blank hasn't
-   reliably suppressed the blank backside's number in testing; a visible "2"
-   there (and "1" on the title page) has been accepted rather than chased
-   further, since fixing it would mean CSS named pages, which this file has
-   already found to cause a stray blank page elsewhere (see the chapter-hint
-   note further down).
+   from the remaining children only). The printed page number is always
+   the physical page position in the export -- deliberately not reset or
+   offset anywhere, so a number on the page always matches the page count
+   in a PDF viewer or a hard copy -- and only the cover (physical page 1)
+   has its running header/footer suppressed, via @page :first below. The
+   blank backside (physical page 2) prints its real number ("2") like any
+   other page; a matching @page :blank rule further down was tried to hide
+   it too, but that pseudo-class only matches a page with no generated
+   content at all, and Blank Page, precisely because it's a real authored
+   page (see book.blade.php's comment on why), always has some, so it
+   never actually matched. CSS named pages are the other way to target one
+   specific physical page, but this file has already found (see the
+   chapter-hint note further down) that they cause a stray blank page in
+   this polyfill build, confirmed again when tried here -- so a visible
+   "2" on the blank backside is accepted rather than chased further.
 
    The @font-face block below points at plain bare filenames (e.g. just
    72-Regular-full.woff2), not paths. That's deliberate: the theme's
@@ -382,16 +384,19 @@ figure img {
 .page-content > h1:first-of-type {
   text-align: center;
   margin-top: 3in;
-  /* Makes this page "1" for the running @bottom-left/@bottom-right
-     counter(page), regardless of how many front-matter pages (Title Page /
-     Blank Page, see exports/book.blade.php) precede it -- those pages get
-     no visible number anyway (see @page :first / @page :blank below), but
-     without this reset the *count* they consume would still shift every
-     subsequent page number down by one. counter-reset on a normal element
-     is standard CSS Paged Media, not the named "page:" property -- that one
-     is deliberately avoided here, see the chapter-hint note further down
-     about the stray-blank-page bug it caused in this polyfill build. */
-  counter-reset: page 1;
+  /* Deliberately no counter-reset here: the printed page number always
+     tracks the physical page position (see the front-matter comment
+     above), so the title page just gets whatever number that physically
+     is -- "3" once a cover and blank backside precede it. A reset was
+     tried, to force this page to read "1" regardless of front matter, but
+     testing it live against this polyfill turned up a real bug: the
+     reset correctly overrides the *display* value for the page it lands
+     on, but the page immediately after it then always comes out one
+     lower than it should, no matter what value the reset uses (confirmed
+     by trying 0, 1, and 2 -- the following page displayed 3 every time).
+     Not worth carrying a second, compensating reset (and its own
+     explanation) just to make this one page's number match a convention
+     nothing else here needs. */
   /* break-before, in addition to (not instead of) the <div class="page-break">
      that already precedes this h1 in the export: with only the preceding
      marker's break-after, Blank Page's own break was being silently
