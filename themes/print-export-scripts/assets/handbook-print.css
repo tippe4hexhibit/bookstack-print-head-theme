@@ -491,8 +491,22 @@ figure img {
 /* BookStack renders the book's description, when set, as a paragraph
    immediately after the title h1 above, inside its own wrapper div --
    it otherwise prints left-aligned like ordinary body text, which looks
-   off-center under a centered title. */
-.page-content > h1:first-of-type + div {
+   off-center under a centered title.
+   Selected via [data-title-page] (the attribute fix-toc-and-links.js
+   stamps onto that h1 before Paged.js runs) rather than
+   ".page-content > h1:first-of-type + div": combining :first-of-type
+   with a "+" combinator in one selector broke the export outright,
+   throwing "item doesn't belong to list" and aborting the whole
+   render -- reproduced by extracting this polyfill build's own bundled
+   selector-matching logic and replaying it against this stylesheet.
+   This build special-cases both patterns (its NthOfType and Following
+   handlers each rewrite/remove any rule matching their own regex
+   against the raw selector text, regardless of where the match falls),
+   and having both fire on the same rule made the second handler try to
+   remove a CSS rule the first had already removed. [data-title-page]
+   avoids :first-of-type entirely so only the "+" handler ever touches
+   this rule. */
+[data-title-page] + div {
   text-align: center;
 }
 
