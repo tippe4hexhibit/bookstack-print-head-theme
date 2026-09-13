@@ -291,6 +291,38 @@ body {
   break-after: page;
 }
 
+/* ------------------------------------------------------------------------
+   Two known instances where the forced break above strands a trailing
+   fragment from the section it follows on a near-empty page of its own,
+   immediately before the next section/part's own forced-fresh-page start:
+
+   1. Foods - Baked's closing "Awards" note (a two-line pointer to another
+      section) was left alone on its own page because the .page-break
+      right after it forces Foods - Preserved onto a fresh page next.
+      Neither line is part of Foods - Preserved and there's nowhere else
+      for it to go once it's been pushed off the bottom of Foods - Baked's
+      last page, so it was landing on a page by itself.
+   2. The last line of Woodworking's Nesbitt Family award paragraph was
+      similarly widowed onto its own page immediately before the "Animal
+      Project Requirements" part-divider's own forced break.
+
+   Both are addressed the same way: the specific .page-break that would
+   otherwise strand it is targeted directly, by the stable BookStack
+   bookmark id on the element right before it, and its own forced break is
+   lifted (break-after: auto instead of page). That lets Foods - Preserved
+   /the part divider flow directly onto the same page as the leftover
+   fragment instead of forcing it onto a dedicated page of its own -- the
+   fragment ends up folded onto the page before the section boundary
+   instead of occupying one alone. This only affects these two exact
+   .page-break markers (matched via adjacent-sibling from a specific
+   content id, not the .page-break class in general), so every other
+   section and part boundary in the book keeps forcing its own fresh page
+   exactly as before. */
+#bkmrk-see-the-awards-secti + .page-break,
+#bkmrk-these-awards-will-be + .page-break {
+  break-after: auto;
+}
+
 /* ========================================================================
    Base typography
    ======================================================================== */
@@ -318,6 +350,32 @@ h4 {
 h2 { font-size: 1.35em; font-style: italic; margin: 1.2em 0 0.4em; }
 h3 { font-size: 1.15em; font-style: italic; margin: 1em 0 0.35em; }
 h4 { font-size: 1em; margin: 0.9em 0 0.3em; }
+
+/* Some sections use a bare bold paragraph as an informal sub-heading
+   instead of a real h3/h4 (e.g. Foods - Baked's "Awards" note above) --
+   content authored that way in BookStack, not something this stylesheet
+   can turn into a real heading element. Giving it the same break-after:
+   avoid a real heading gets means it can never end up separated from the
+   paragraph it introduces, the same "keep short heading-plus-paragraph
+   groups together" rule applied to actual headings just above.
+
+   Scoped to only fire when a paragraph actually follows (:has(+ p)):
+   tried unscoped first, and it backfired on the handful of these bold
+   paragraphs that happen to be the last thing in their section, right
+   before a forced .page-break -- e.g. "NO PROJECTS WILL BE RELEASED
+   EARLIER THAN..." at the end of 4-H Fair Exhibit Information, confirmed
+   live by rendering a real export. Those already sat flush at the bottom
+   of their page with nothing wrong; adding break-after: avoid to them
+   made this polyfill shove the whole paragraph onto a fresh page instead
+   (apparently treating the marker's forced break, not just a natural
+   overflow break, as something to avoid landing right after), stranding
+   it there alone -- reproducing the exact defect this rule exists to
+   fix, just at a new spot. Requiring a following <p> targets only the
+   genuine heading-plus-explanation pairing and never matches a paragraph
+   whose very next sibling is the .page-break marker. */
+p.paragraph:has(> strong:only-child):has(+ p) {
+  break-after: avoid;
+}
 
 ol,
 ul {
@@ -391,12 +449,16 @@ figure img {
 
 /* ========================================================================
    Title page
-   The book title is the first h1 in the export, the one with no id. Its font-size
-   comes from an inline style BookStack wrote (left alone here); this just
-   positions it and forces the table of contents to start on its own page.
+   The book title is the first h1 in the export, the one with no id. Its
+   font-size comes from an inline style BookStack wrote (style="font-size:
+   4.8em") -- generated fresh into every export, not something authored as
+   content, so it can't just be edited by hand. Overriding it here needs
+   !important: an inline style otherwise beats any selector-based rule in
+   this file regardless of specificity.
    ======================================================================== */
 
 .page-content > h1:first-of-type {
+  font-size: 4.5em !important;
   text-align: center;
   margin-top: 3in;
   /* Deliberately no counter-reset here: the printed page number always
@@ -424,6 +486,14 @@ figure img {
      with the existing marker div rather than a replacement for it, since
      removing that marker hasn't been re-tested. */
   break-before: page;
+}
+
+/* BookStack renders the book's description, when set, as a paragraph
+   immediately after the title h1 above, inside its own wrapper div --
+   it otherwise prints left-aligned like ordinary body text, which looks
+   off-center under a centered title. */
+.page-content > h1:first-of-type + div {
+  text-align: center;
 }
 
 /* ========================================================================
