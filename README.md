@@ -69,6 +69,15 @@ Since this now handles the print stack unconditionally for every HTML export,
 you can delete any script from Custom Head Content that was only there to
 load these resources — it's fully superseded.
 
+- **Comment visibility**: the page comments section (`comments/comments.blade.php`)
+  is hidden entirely from guests — anyone browsing without logging in, i.e.
+  BookStack's built-in "Public" role. Signed-in users still see and interact
+  with comments exactly as core BookStack behaves, gated by whatever the
+  site's existing per-role permissions (`comment-create-all`, etc.) already
+  allow — this override doesn't touch that logic, it only adds an
+  `@auth`/`@endauth` wrapper around the section so it never renders for
+  anonymous visitors in the first place.
+
 ## What's vendored, and licensing
 
 | Path | What | License |
@@ -97,6 +106,7 @@ the install, activated by setting the `APP_THEME` environment variable.
    ```
    <bookstack-root>/themes/print-export-scripts/
      exports/parts/custom-head.blade.php
+     comments/comments.blade.php
      assets/
        handbook-print.css
        fix-toc-and-links.js
@@ -196,9 +206,13 @@ points at it.
 
 ## Compatibility note
 
-This overrides one core BookStack view file
-(`resources/views/exports/parts/custom-head.blade.php`). If a future BookStack
-release restructures that view (renames the `$format` variable it's passed, or
-changes what calls it), this override may silently stop matching and fall out
-of sync. Check this repo's override against the current core file after major
+This overrides core BookStack view files, including
+`resources/views/exports/parts/custom-head.blade.php` and
+`resources/views/comments/comments.blade.php`. If a future BookStack release
+restructures one of these views (renames a variable it's passed, changes what
+calls it, or changes its markup), the matching override here may silently
+stop matching and fall out of sync — the `comments.blade.php` override in
+particular is a full copy of core's markup plus an `@auth` wrapper, so it
+needs to be re-diffed against core whenever core's comments UI changes.
+Check this repo's overrides against the current core files after major
 BookStack upgrades.
